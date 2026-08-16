@@ -26,8 +26,6 @@ jobs:
         run: |
           device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; compatible=[xs for r,xs in d.items() if r.endswith("iOS-18-5")]; pools=compatible or list(d.values()); print(next(x["udid"] for xs in pools for x in xs if x["name"].startswith("iPhone 16")))')
           echo "id=$device" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$device" || true
-          xcrun simctl bootstatus "$device" -b
       - name: Compile app and test bundles
         run: >-
           xcodebuild build-for-testing
