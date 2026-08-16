@@ -29,12 +29,17 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         GENERATE_INFOPLIST_FILE: true
+      configs:
+        Debug:
+          APS_ENVIRONMENT: development
+        Release:
+          APS_ENVIRONMENT: production
     dependencies:
       - package: Audio2MIDICore
     entitlements:
       path: App/Audio2MIDI.entitlements
       properties:
-        aps-environment: development
+        aps-environment: "$(APS_ENVIRONMENT)"
     scheme:
       testTargets:
         - Audio2MIDIUITests

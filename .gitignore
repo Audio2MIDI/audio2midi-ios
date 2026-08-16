@@ -4,4 +4,4 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 Audio2MIDI.xcodeproj/
-
+.apple-release/

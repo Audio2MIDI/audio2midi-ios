@@ -31,7 +31,8 @@ jobs:
           security set-keychain-settings -lut 21600 build.keychain
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security import "$RUNNER_TEMP/distribution.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k build.keychain
-          security list-keychain -d user -s build.keychain
+          EXISTING_KEYCHAINS=$(security list-keychains -d user | tr -d '"')
+          security list-keychain -d user -s build.keychain $EXISTING_KEYCHAINS
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" build.keychain
       - name: Install provisioning profile
         env:
@@ -47,6 +48,8 @@ jobs:
           -archivePath "$RUNNER_TEMP/Audio2MIDI.xcarchive"
           -destination generic/platform=iOS
           DEVELOPMENT_TEAM="${{ vars.APPLE_TEAM_ID }}"
+          CODE_SIGN_STYLE=Manual
+          CODE_SIGN_IDENTITY="Apple Distribution"
           PROVISIONING_PROFILE_SPECIFIER="${{ vars.IOS_APPSTORE_PROFILE_NAME }}"
           CURRENT_PROJECT_VERSION="${{ github.run_number }}"
       - name: Prepare export options
@@ -66,4 +69,3 @@ jobs:
           release-notes: ${{ inputs.release_notes }}
           uses-non-exempt-encryption: "false"
           wait-for-processing: "true"
-
