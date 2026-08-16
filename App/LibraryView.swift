@@ -36,7 +36,7 @@ struct LibraryView: View {
 }
 
 private struct ProjectRow: View {
-    let item: LibraryItem
+    let item: Audio2MIDICore.LibraryItem
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
@@ -68,7 +68,7 @@ private struct ProjectRow: View {
 }
 
 struct ProjectDetailView: View {
-    let item: LibraryItem
+    let item: Audio2MIDICore.LibraryItem
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -102,4 +102,3 @@ struct ProjectDetailView: View {
         }.background(StudioColor.black).navigationBarTitleDisplayMode(.inline)
     }
 }
-
