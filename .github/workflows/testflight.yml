@@ -1,0 +1,69 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: What changed in this beta?
+        required: true
+        type: string
+
+concurrency:
+  group: audio2midi-testflight
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    environment: testflight
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Import signing certificate
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import "$RUNNER_TEMP/distribution.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k build.keychain
+          security list-keychain -d user -s build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" build.keychain
+      - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+        run: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/audio2midi.mobileprovision"
+      - name: Archive
+        run: >-
+          xcodebuild archive
+          -project Audio2MIDI.xcodeproj
+          -scheme Audio2MIDI
+          -archivePath "$RUNNER_TEMP/Audio2MIDI.xcarchive"
+          -destination generic/platform=iOS
+          DEVELOPMENT_TEAM="${{ vars.APPLE_TEAM_ID }}"
+          PROVISIONING_PROFILE_SPECIFIER="${{ vars.IOS_APPSTORE_PROFILE_NAME }}"
+          CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+      - name: Prepare export options
+        run: |
+          cp Config/ExportOptions.template.plist "$RUNNER_TEMP/ExportOptions.plist"
+          /usr/libexec/PlistBuddy -c "Set :teamID ${{ vars.APPLE_TEAM_ID }}" "$RUNNER_TEMP/ExportOptions.plist"
+          /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:ru.audio2midi.app ${{ vars.IOS_APPSTORE_PROFILE_NAME }}" "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Export IPA
+        run: xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Audio2MIDI.xcarchive" -exportPath "$RUNNER_TEMP/export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v4
+        with:
+          app-path: ${{ runner.temp }}/export/Audio2MIDI.ipa
+          issuer-id: ${{ vars.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ vars.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          release-notes: ${{ inputs.release_notes }}
+          uses-non-exempt-encryption: "false"
+          wait-for-processing: "true"
+

@@ -1,0 +1,42 @@
+name: iOS CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  core:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test API and domain layer
+        run: swift test
+
+  app:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Select a simulator
+        id: simulator
+        run: |
+          device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["name"] for r in d.values() for x in r if x["name"].startswith("iPhone")))')
+          echo "name=$device" >> "$GITHUB_OUTPUT"
+      - name: Build and run fixture UI tests
+        run: >-
+          xcodebuild test
+          -project Audio2MIDI.xcodeproj
+          -scheme Audio2MIDI
+          -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}"
+          -derivedDataPath DerivedData
+          CODE_SIGNING_ALLOWED=NO
+      - name: Upload test result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: DerivedData/Logs/Test/*.xcresult

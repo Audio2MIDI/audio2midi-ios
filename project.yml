@@ -1,0 +1,51 @@
+name: Audio2MIDI
+options:
+  bundleIdPrefix: ru.audio2midi
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  Audio2MIDICore:
+    path: .
+targets:
+  Audio2MIDI:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ru.audio2midi.app
+        PRODUCT_NAME: Audio2MIDI
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: 6.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_KEY_CFBundleDisplayName: Audio2MIDI
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Record a melody or song to turn it into music files.
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - package: Audio2MIDICore
+    entitlements:
+      path: App/Audio2MIDI.entitlements
+      properties:
+        aps-environment: development
+    scheme:
+      testTargets:
+        - Audio2MIDIUITests
+  Audio2MIDIUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Audio2MIDI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ru.audio2midi.app.uitests
+        GENERATE_INFOPLIST_FILE: true
+
