@@ -15,12 +15,14 @@ public protocol Audio2MIDIService: Sendable {
 }
 
 public actor APIClient: Audio2MIDIService {
+    public static let productionBaseURL = URL(string: "https://api.audio2midi.ru")!
+
     private let baseURL: URL
     private let session: URLSession
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    public init(baseURL: URL = URL(string: "https://app.audio2midi.ru/api")!, session: URLSession = .shared) {
+    public init(baseURL: URL = productionBaseURL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
     }

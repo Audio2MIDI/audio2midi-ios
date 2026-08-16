@@ -21,3 +21,8 @@ import Testing
     let response = try JSONDecoder().decode(LibraryEnvelope.self, from: data)
     #expect(response.items.first?.projectID != nil)
 }
+
+@Test func productionAPIPathDoesNotResolveToTheMiniappHTML() {
+    let url = URL(string: "/v1/auth/capabilities", relativeTo: APIClient.productionBaseURL)
+    #expect(url?.absoluteString == "https://api.audio2midi.ru/v1/auth/capabilities")
+}
