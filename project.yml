@@ -26,6 +26,7 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Audio2MIDI
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
         INFOPLIST_KEY_NSMicrophoneUsageDescription: Record a melody or song to turn it into music files.
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         GENERATE_INFOPLIST_FILE: true
     dependencies:
@@ -48,4 +49,3 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ru.audio2midi.app.uitests
         GENERATE_INFOPLIST_FILE: true
-
