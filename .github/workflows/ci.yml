@@ -42,13 +42,19 @@ jobs:
           -scheme Audio2MIDI
           -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}"
           -derivedDataPath DerivedData
+          -resultBundlePath DerivedData/TestResults.xcresult
           -test-timeouts-enabled YES
           -default-test-execution-time-allowance 30
           -maximum-test-execution-time-allowance 60
           CODE_SIGNING_ALLOWED=NO
+      - name: Export visual snapshots
+        if: always()
+        run: xcrun xcresulttool export attachments --path DerivedData/TestResults.xcresult --output-path Screenshots
       - name: Upload test result bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-test-results
-          path: DerivedData/Logs/Test/*.xcresult
+          path: |
+            DerivedData/TestResults.xcresult
+            Screenshots
