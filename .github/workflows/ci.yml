@@ -7,14 +7,14 @@ on:
 
 jobs:
   core:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Test API and domain layer
         run: swift test
 
   app:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen

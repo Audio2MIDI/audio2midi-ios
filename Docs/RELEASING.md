@@ -31,4 +31,6 @@ brief beta notes. The workflow uploads asynchronously and finishes after App
 Store Connect accepts the IPA; Apple's TestFlight processing continues in the
 background. This avoids false CI failures when a long processing wait outlives
 the App Store Connect API token. The encryption declaration is embedded in the
-app's Info.plist. No production backend deploy is performed by the iOS workflow.
+app's Info.plist. Both CI and release use the macOS 26 runner so App Store builds
+are compiled with the currently required iOS 26 SDK. No production backend
+deploy is performed by the iOS workflow.
