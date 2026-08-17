@@ -27,6 +27,8 @@ GitHub environment secrets:
 - `APPSTORE_API_PRIVATE_KEY` (raw `.p8` content)
 
 Release: merge a green PR, open Actions → TestFlight → Run workflow, and enter
-brief beta notes. TestFlight processing begins only after the archive and all
-tests succeed. No production backend deploy is performed by the iOS workflow.
-
+brief beta notes. The workflow uploads asynchronously and finishes after App
+Store Connect accepts the IPA; Apple's TestFlight processing continues in the
+background. This avoids false CI failures when a long processing wait outlives
+the App Store Connect API token. The encryption declaration is embedded in the
+app's Info.plist. No production backend deploy is performed by the iOS workflow.
