@@ -25,6 +25,9 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .didRegisterForPush)) { note in
             if let token = note.object as? String { Task { await model.registerPush(token: token) } }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .didFailToRegisterForPush)) { note in
+            if let message = note.object as? String { model.errorMessage = message }
+        }
         .alert("Something went wrong", isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }

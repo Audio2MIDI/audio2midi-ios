@@ -51,4 +51,10 @@ public actor FixtureService: Audio2MIDIService {
         [CatalogTrack(sourceID: "fixture-track", title: "Midnight Sketch", artist: "Fixture Artist", artworkURL: nil)]
     }
     public func registerPush(installationID: UUID, token: String, environment: String, locale: String) async throws {}
+    public func unregisterPush(installationID: UUID) async throws {}
+    public func editorAvailable() async throws -> Bool { true }
+    public func editorHandoffToken(projectID: UUID) async throws -> String { "fixture-token" }
+    public func download(_ artifact: Artifact) async throws -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("fixture.mid")
+    }
 }

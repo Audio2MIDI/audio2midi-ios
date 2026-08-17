@@ -20,6 +20,7 @@ struct CreateView: View {
     @State private var searchResults: [CatalogTrack] = []
     @State private var selectedTrack: CatalogTrack?
     @State private var isSubmitting = false
+    @State private var submitStatus = ""
     @StateObject private var recorder = VoiceRecorder()
 
     var body: some View {
@@ -51,6 +52,12 @@ struct CreateView: View {
                         }.buttonStyle(.plain).accessibilityIdentifier("mode.\(candidate.rawValue)")
                     }
                 }
+                if !submitStatus.isEmpty {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(StudioColor.blue)
+                        Text(submitStatus).font(.footnote).foregroundStyle(StudioColor.secondary)
+                    }
+                }
                 Button(isSubmitting ? "Creating…" : "Create \(mode.title)") { Task { await submit() } }
                     .disabled(!canSubmit || isSubmitting)
                     .buttonStyle(StudioButtonStyle(prominent: true))
@@ -61,7 +68,22 @@ struct CreateView: View {
         .navigationTitle("Create")
         .navigationBarTitleDisplayMode(.inline)
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.audio, .mpeg4Audio, .mp3]) { result in
-            if case let .success(url) = result { selectedFile = url }
+            switch result {
+            case let .success(url):
+                do {
+                    let access = url.startAccessingSecurityScopedResource()
+                    defer { if access { url.stopAccessingSecurityScopedResource() } }
+                    try SourceValidator.validateAudioFile(url)
+                    selectedFile = url
+                } catch { model.errorMessage = error.localizedDescription }
+            case let .failure(error): model.errorMessage = error.localizedDescription
+            }
+        }
+        .onChange(of: source) { oldSource, newSource in
+            if oldSource == .record, newSource != .record, isRecording {
+                selectedFile = recorder.stop()
+                isRecording = false
+            }
         }
     }
 
@@ -107,13 +129,23 @@ struct CreateView: View {
     private func inputPanel(icon: String, placeholder: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon).foregroundStyle(StudioColor.blue)
-            TextField(placeholder, text: $sourceText).textInputAutocapitalization(.never).autocorrectionDisabled()
+            TextField(placeholder, text: $sourceText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(source == .link ? .URL : .default)
+                .onChange(of: sourceText) { _, _ in if source == .search { selectedTrack = nil } }
             if !sourceText.isEmpty { Button { sourceText = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(StudioColor.secondary) } }
         }.padding(16).background(StudioColor.surface).clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private func icon(for mode: OutputMode) -> String {
-        switch mode { case .pianoCover: "pianokeys"; case .notesChords: "music.note.list"; case .stems: "slider.horizontal.3" }
+        switch mode {
+        case .pianoCover: "pianokeys"
+        case .pianoTranscription: "waveform.badge.mic"
+        case .notesChords: "music.note.list"
+        case .quickMIDI: "bolt.fill"
+        case .stems: "slider.horizontal.3"
+        }
     }
 
     private func toggleRecording() async {
@@ -131,32 +163,34 @@ struct CreateView: View {
 
     private var canSubmit: Bool {
         switch source {
-        case .file, .record: selectedFile != nil
-        case .link: URL(string: sourceText)?.scheme != nil
+        case .file, .record: selectedFile != nil && !isRecording
+        case .link: SourceValidator.supportedRemoteURL(sourceText) != nil
         case .search: selectedTrack != nil
         }
     }
 
     private func search() async {
-        do { searchResults = try await model.service.searchCatalog(sourceText) }
+        do { searchResults = try await model.service.searchCatalog(sourceText.trimmingCharacters(in: .whitespacesAndNewlines)) }
         catch { model.errorMessage = error.localizedDescription }
     }
 
     private func submit() async {
         isSubmitting = true
-        defer { isSubmitting = false }
+        submitStatus = source == .link || source == .search ? "Preparing the source…" : "Uploading audio…"
+        defer { isSubmitting = false; submitStatus = "" }
         do {
             switch source {
             case .file, .record:
                 guard let selectedFile else { return }
                 _ = try await model.service.create(fileURL: selectedFile, mode: mode)
             case .link:
-                _ = try await model.service.create(remoteValue: sourceText, kind: "url", title: nil, mode: mode)
+                _ = try await model.service.create(remoteValue: sourceText.trimmingCharacters(in: .whitespacesAndNewlines), kind: "url", title: nil, mode: mode)
             case .search:
                 guard let selectedTrack else { return }
                 _ = try await model.service.create(remoteValue: selectedTrack.sourceID, kind: "catalog_track", title: "\(selectedTrack.artist) — \(selectedTrack.title)", mode: mode)
             }
-            await model.refreshLibrary()
+            submitStatus = "Added to the processing queue…"
+            await model.refreshLibrary(showLoading: false)
             model.selectedTab = 0
         } catch { model.errorMessage = error.localizedDescription }
     }
@@ -185,7 +219,7 @@ private final class VoiceRecorder: NSObject, ObservableObject {
 
     func stop() -> URL? {
         recorder?.stop()
-        try? AVAudioSession.sharedInstance().setActive(false)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         recorder = nil
         return fileURL
     }

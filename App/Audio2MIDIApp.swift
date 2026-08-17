@@ -31,9 +31,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             object: deviceToken.map { String(format: "%02x", $0) }.joined()
         )
     }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .didFailToRegisterForPush, object: error.localizedDescription)
+    }
 }
 
 extension Notification.Name {
     static let didRegisterForPush = Notification.Name("didRegisterForPush")
+    static let didFailToRegisterForPush = Notification.Name("didFailToRegisterForPush")
 }
-

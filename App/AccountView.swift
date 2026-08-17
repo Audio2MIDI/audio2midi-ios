@@ -3,7 +3,7 @@ import UserNotifications
 
 struct AccountView: View {
     @Bindable var model: AppModel
-    @State private var notificationsEnabled = false
+    @AppStorage("notifications.enabled") private var notificationsEnabled = false
     var body: some View {
         List {
             Section {
@@ -20,15 +20,28 @@ struct AccountView: View {
             }
             Section("Notifications") {
                 Toggle("Project completion alerts", isOn: $notificationsEnabled)
-                    .onChange(of: notificationsEnabled) { _, enabled in if enabled { Task { await enableNotifications() } } }
+                    .onChange(of: notificationsEnabled) { _, enabled in
+                        if enabled { Task { await enableNotifications() } }
+                        else {
+                            UIApplication.shared.unregisterForRemoteNotifications()
+                            Task { await model.unregisterPush() }
+                        }
+                    }
             }
             Section("About") {
-                LabeledContent("Version", value: "0.1.0 (1)")
+                LabeledContent("Version", value: version)
                 Link("Privacy", destination: URL(string: "https://audio2midi.ru/privacy")!)
             }
-        }.scrollContentBackground(.hidden).background(StudioColor.black).navigationTitle("Account")
+        }
+        .scrollContentBackground(.hidden)
+        .background(StudioColor.black)
+        .navigationTitle("Account")
     }
     private var initials: String { String((model.account?.username ?? "A").prefix(1)).uppercased() }
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        return "\(info?["CFBundleShortVersionString"] as? String ?? "—") (\(info?["CFBundleVersion"] as? String ?? "—"))"
+    }
     private func enableNotifications() async {
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
@@ -37,4 +50,3 @@ struct AccountView: View {
         } catch { notificationsEnabled = false; model.errorMessage = error.localizedDescription }
     }
 }
-

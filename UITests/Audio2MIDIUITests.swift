@@ -18,7 +18,9 @@ final class Audio2MIDIUITests: XCTestCase {
         attachScreenshot(app, name: "Ready library")
         app.tabBars.buttons["Create"].tap()
         XCTAssertTrue(app.buttons["mode.piano_cover"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["mode.piano_transcription"].exists)
         XCTAssertTrue(app.buttons["mode.notes_chords"].exists)
+        XCTAssertTrue(app.buttons["mode.music2midi"].exists)
         XCTAssertTrue(app.buttons["mode.stems"].exists)
         attachScreenshot(app, name: "Create studio")
     }

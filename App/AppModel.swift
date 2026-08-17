@@ -11,6 +11,7 @@ final class AppModel {
     var phase: Phase = .launching
     var account: Account?
     var library: [LibraryItem] = []
+    var editorAvailable = false
     var isLoading = false
     var errorMessage: String?
     var selectedTab = 0
@@ -31,6 +32,7 @@ final class AppModel {
             account = try await service.currentAccount()
             phase = .signedIn
             await refreshLibrary()
+            await refreshEditorAvailability()
         } catch APIError.unauthenticated {
             phase = .signedOut
         } catch {
@@ -46,6 +48,7 @@ final class AppModel {
             account = try await service.verifyEmail(email: email, code: code)
             phase = .signedIn
             await refreshLibrary()
+            await refreshEditorAvailability()
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -53,24 +56,23 @@ final class AppModel {
         }
     }
 
-    func refreshLibrary() async {
-        isLoading = true
-        defer { isLoading = false }
+    func refreshLibrary(showLoading: Bool = true) async {
+        if showLoading { isLoading = true }
+        defer { if showLoading { isLoading = false } }
         do { library = try await service.library() }
-        catch { errorMessage = error.localizedDescription }
+        catch APIError.unauthenticated {
+            account = nil
+            phase = .signedOut
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func refreshEditorAvailability() async {
+        editorAvailable = (try? await service.editorAvailable()) ?? false
     }
 
     func registerPush(token: String) async {
         guard phase == .signedIn else { return }
-        let key = "push.installation-id"
-        let defaults = UserDefaults.standard
-        let installationID: UUID
-        if let stored = defaults.string(forKey: key), let parsed = UUID(uuidString: stored) {
-            installationID = parsed
-        } else {
-            installationID = UUID()
-            defaults.set(installationID.uuidString, forKey: key)
-        }
+        let installationID = installationID()
         #if DEBUG
         let environment = "sandbox"
         #else
@@ -84,5 +86,22 @@ final class AppModel {
                 locale: Locale.current.language.languageCode?.identifier == "ru" ? "ru" : "en"
             )
         } catch { errorMessage = error.localizedDescription }
+    }
+
+    func unregisterPush() async {
+        do { try await service.unregisterPush(installationID: installationID()) }
+        catch APIError.unauthenticated { return }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func installationID() -> UUID {
+        let key = "push.installation-id"
+        let defaults = UserDefaults.standard
+        if let stored = defaults.string(forKey: key), let parsed = UUID(uuidString: stored) {
+            return parsed
+        }
+        let id = UUID()
+        defaults.set(id.uuidString, forKey: key)
+        return id
     }
 }
