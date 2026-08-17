@@ -68,4 +68,5 @@ jobs:
           issuer-id: ${{ vars.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ vars.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
-          wait-for-processing: "false"
+          release-notes: ${{ inputs.release_notes }}
+          wait-for-processing: "true"
